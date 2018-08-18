@@ -58,6 +58,8 @@ MyWindow::MyWindow(Controller* _controller)
 //==============================================================================
 MyWindow::~MyWindow()
 {
+   delete mController;
+   std::cout << "closing window ..." << std::endl;
 }
 
 //==============================================================================

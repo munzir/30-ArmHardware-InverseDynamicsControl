@@ -4,6 +4,7 @@
 CMakeFiles/operationalSpaceControl.dir/Controller.cpp.o
  /home/munzir/Documents/Software/30-ArmHardware-InverseDynamicsControl/Controller.cpp
  /home/munzir/Documents/Software/30-ArmHardware-InverseDynamicsControl/Controller.hpp
+ /home/munzir/Documents/Software/30-ArmHardware-InverseDynamicsControl/file_ops.hpp
  /usr/local/include/Eigen/Cholesky
  /usr/local/include/Eigen/Core
  /usr/local/include/Eigen/Dense
@@ -295,6 +296,30 @@ CMakeFiles/operationalSpaceControl.dir/Controller.cpp.o
  /usr/local/include/Eigen/src/plugins/IndexedViewMethods.h
  /usr/local/include/Eigen/src/plugins/MatrixCwiseBinaryOps.h
  /usr/local/include/Eigen/src/plugins/MatrixCwiseUnaryOps.h
+ /usr/local/include/ach.h
+ /usr/local/include/amino.h
+ /usr/local/include/amino/clapack.h
+ /usr/local/include/amino/clapack_impl.h
+ /usr/local/include/amino/cv.h
+ /usr/local/include/amino/debug.h
+ /usr/local/include/amino/def.h
+ /usr/local/include/amino/endconv.h
+ /usr/local/include/amino/io.h
+ /usr/local/include/amino/kin.h
+ /usr/local/include/amino/la.h
+ /usr/local/include/amino/la_impl.h
+ /usr/local/include/amino/lapack.h
+ /usr/local/include/amino/lapack_impl.h
+ /usr/local/include/amino/mangle.h
+ /usr/local/include/amino/math.h
+ /usr/local/include/amino/mem.h
+ /usr/local/include/amino/plot.h
+ /usr/local/include/amino/tf.h
+ /usr/local/include/amino/time.h
+ /usr/local/include/amino/type.h
+ /usr/local/include/amino/undef.h
+ /usr/local/include/amino/unit.h
+ /usr/local/include/amino/validate.h
  /usr/local/include/dart/collision/CollisionDetector.hpp
  /usr/local/include/dart/collision/CollisionFilter.hpp
  /usr/local/include/dart/collision/CollisionGroup.hpp
@@ -510,6 +535,14 @@ CMakeFiles/operationalSpaceControl.dir/Controller.cpp.o
  /usr/local/include/dart/simulation/Recording.hpp
  /usr/local/include/dart/simulation/World.hpp
  /usr/local/include/dart/simulation/simulation.hpp
+ /usr/local/include/google/protobuf-c/protobuf-c-private.h
+ /usr/local/include/google/protobuf-c/protobuf-c.h
+ /usr/local/include/somatic.h
+ /usr/local/include/somatic.pb-c.h
+ /usr/local/include/somatic/daemon.h
+ /usr/local/include/somatic/motor.h
+ /usr/local/include/somatic/msg.h
+ /usr/local/include/somatic/util.h
 CMakeFiles/operationalSpaceControl.dir/Main.cpp.o
  /home/munzir/Documents/Software/30-ArmHardware-InverseDynamicsControl/Controller.hpp
  /home/munzir/Documents/Software/30-ArmHardware-InverseDynamicsControl/Main.cpp
@@ -806,6 +839,30 @@ CMakeFiles/operationalSpaceControl.dir/Main.cpp.o
  /usr/local/include/Eigen/src/plugins/IndexedViewMethods.h
  /usr/local/include/Eigen/src/plugins/MatrixCwiseBinaryOps.h
  /usr/local/include/Eigen/src/plugins/MatrixCwiseUnaryOps.h
+ /usr/local/include/ach.h
+ /usr/local/include/amino.h
+ /usr/local/include/amino/clapack.h
+ /usr/local/include/amino/clapack_impl.h
+ /usr/local/include/amino/cv.h
+ /usr/local/include/amino/debug.h
+ /usr/local/include/amino/def.h
+ /usr/local/include/amino/endconv.h
+ /usr/local/include/amino/io.h
+ /usr/local/include/amino/kin.h
+ /usr/local/include/amino/la.h
+ /usr/local/include/amino/la_impl.h
+ /usr/local/include/amino/lapack.h
+ /usr/local/include/amino/lapack_impl.h
+ /usr/local/include/amino/mangle.h
+ /usr/local/include/amino/math.h
+ /usr/local/include/amino/mem.h
+ /usr/local/include/amino/plot.h
+ /usr/local/include/amino/tf.h
+ /usr/local/include/amino/time.h
+ /usr/local/include/amino/type.h
+ /usr/local/include/amino/undef.h
+ /usr/local/include/amino/unit.h
+ /usr/local/include/amino/validate.h
  /usr/local/include/dart/collision/CollisionDetector.hpp
  /usr/local/include/dart/collision/CollisionFilter.hpp
  /usr/local/include/dart/collision/CollisionGroup.hpp
@@ -1041,10 +1098,19 @@ CMakeFiles/operationalSpaceControl.dir/Main.cpp.o
  /usr/local/include/dart/utils/urdf/DartLoader.hpp
  /usr/local/include/dart/utils/urdf/urdf.hpp
  /usr/local/include/dart/utils/urdf/urdf_world_parser.hpp
+ /usr/local/include/google/protobuf-c/protobuf-c-private.h
+ /usr/local/include/google/protobuf-c/protobuf-c.h
+ /usr/local/include/somatic.h
+ /usr/local/include/somatic.pb-c.h
+ /usr/local/include/somatic/daemon.h
+ /usr/local/include/somatic/motor.h
+ /usr/local/include/somatic/msg.h
+ /usr/local/include/somatic/util.h
 CMakeFiles/operationalSpaceControl.dir/MyWindow.cpp.o
  /home/munzir/Documents/Software/30-ArmHardware-InverseDynamicsControl/Controller.hpp
  /home/munzir/Documents/Software/30-ArmHardware-InverseDynamicsControl/MyWindow.cpp
  /home/munzir/Documents/Software/30-ArmHardware-InverseDynamicsControl/MyWindow.hpp
+ /home/munzir/Documents/Software/30-ArmHardware-InverseDynamicsControl/file_ops.hpp
  /usr/local/include/Eigen/Cholesky
  /usr/local/include/Eigen/Core
  /usr/local/include/Eigen/Dense
@@ -1336,6 +1402,30 @@ CMakeFiles/operationalSpaceControl.dir/MyWindow.cpp.o
  /usr/local/include/Eigen/src/plugins/IndexedViewMethods.h
  /usr/local/include/Eigen/src/plugins/MatrixCwiseBinaryOps.h
  /usr/local/include/Eigen/src/plugins/MatrixCwiseUnaryOps.h
+ /usr/local/include/ach.h
+ /usr/local/include/amino.h
+ /usr/local/include/amino/clapack.h
+ /usr/local/include/amino/clapack_impl.h
+ /usr/local/include/amino/cv.h
+ /usr/local/include/amino/debug.h
+ /usr/local/include/amino/def.h
+ /usr/local/include/amino/endconv.h
+ /usr/local/include/amino/io.h
+ /usr/local/include/amino/kin.h
+ /usr/local/include/amino/la.h
+ /usr/local/include/amino/la_impl.h
+ /usr/local/include/amino/lapack.h
+ /usr/local/include/amino/lapack_impl.h
+ /usr/local/include/amino/mangle.h
+ /usr/local/include/amino/math.h
+ /usr/local/include/amino/mem.h
+ /usr/local/include/amino/plot.h
+ /usr/local/include/amino/tf.h
+ /usr/local/include/amino/time.h
+ /usr/local/include/amino/type.h
+ /usr/local/include/amino/undef.h
+ /usr/local/include/amino/unit.h
+ /usr/local/include/amino/validate.h
  /usr/local/include/dart/collision/CollisionDetector.hpp
  /usr/local/include/dart/collision/CollisionFilter.hpp
  /usr/local/include/dart/collision/CollisionGroup.hpp
@@ -1565,6 +1655,14 @@ CMakeFiles/operationalSpaceControl.dir/MyWindow.cpp.o
  /usr/local/include/dart/simulation/Recording.hpp
  /usr/local/include/dart/simulation/World.hpp
  /usr/local/include/dart/simulation/simulation.hpp
+ /usr/local/include/google/protobuf-c/protobuf-c-private.h
+ /usr/local/include/google/protobuf-c/protobuf-c.h
+ /usr/local/include/somatic.h
+ /usr/local/include/somatic.pb-c.h
+ /usr/local/include/somatic/daemon.h
+ /usr/local/include/somatic/motor.h
+ /usr/local/include/somatic/msg.h
+ /usr/local/include/somatic/util.h
 CMakeFiles/operationalSpaceControl.dir/file_ops.cpp.o
  /home/munzir/Documents/Software/30-ArmHardware-InverseDynamicsControl/file_ops.cpp
  /home/munzir/Documents/Software/30-ArmHardware-InverseDynamicsControl/file_ops.hpp

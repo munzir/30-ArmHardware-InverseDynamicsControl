@@ -39,8 +39,56 @@ Controller::Controller(dart::dynamics::SkeletonPtr _robot,
 {
   assert(_robot != nullptr);
   assert(_endEffector != nullptr);
-
   int dof = mRobot->getNumDofs();
+
+
+  // load dynamic parameters and set them in the robot
+  Eigen::MatrixXd beta 
+      = readInputFileAsMatrix("../../20c-RidgeRegression_arm/betaFull/betaFull.txt");
+  int numBodies = mRobot->getNumBodyNodes();
+  int paramsPerBody = 13;
+  mRotorInertia.setZero();
+  mViscousFriction.setZero();
+  mCoulombFriction.setZero();
+  mKmInv.setZero();
+  mGRInv.setZero();
+  for(int i=1; i<numBodies; i++) {
+    int ind = paramsPerBody*(i-1);
+    double m = beta(ind + 0);
+    Eigen::Vector3d mCOM = beta.block(ind+1, 0, 3, 1);
+    double xx = beta(ind + 4);
+    double yy = beta(ind + 5);
+    double zz = beta(ind + 6);
+    double xy = beta(ind + 7);
+    double xz = beta(ind + 8);
+    double yz = beta(ind + 9);
+
+    mRobot->getBodyNode(i)->setMass(m);
+    mRobot->getBodyNode(i)->setLocalCOM(mCOM/m);
+    mRobot->getBodyNode(i)->setMomentOfInertia(xx, yy, zz, xy, xz, yz);
+
+    mRotorInertia(i-1, i-1) = beta(ind + 10)*mGR_array[i-1]*mGR_array[i-1];
+    mViscousFriction(i-1, i-1) = beta(ind + 11);
+    mCoulombFriction(i-1, i-1) = beta(ind + 12);
+    mKmInv(i-1, i-1) = 1/mKm_array[i-1];
+    mGRInv(i-1, i-1) = 1/mGR_array[i-1];
+  }
+
+  for(int i=1; i<numBodies; i++) {
+    cout << "body node: " << i << ". " << mRobot->getBodyNode(i)->getName() << endl;
+    cout << "===================================" << endl;
+    cout << "mass: " << mRobot->getBodyNode(i)->getMass() << endl;
+    cout << "Local mCOM: " << mRobot->getBodyNode(i)->getLocalCOM().transpose()*mRobot->getBodyNode(i)->getMass() << endl;
+    double xx, yy, zz, xy, yz, xz;
+    mRobot->getBodyNode(i)->getMomentOfInertia(xx, yy, zz, xy, xz, yz);
+    cout << "xx: " << xx << endl;
+    cout << "yy: " << yy << endl;
+    cout << "zz: " << zz << endl;
+    cout << "xy: " << xy << endl;
+    cout << "xz: " << xz << endl;
+    cout << "yz: " << yz << endl << endl;
+  }
+  curLim << 9.5, 9.5, 7.5, 7.5, 5.5, 5.5, 5.5;
 
   mForces.setZero(dof);
 
@@ -56,18 +104,53 @@ Controller::Controller(dart::dynamics::SkeletonPtr _robot,
     mKvOr(i, i) = 50; 
   }
 
-  // Remove position limits
-  for (int i = 0; i < dof; ++i)
-    _robot->getJoint(i)->setPositionLimitEnforced(false);
+  // // Remove position limits
+  // for (int i = 0; i < dof; ++i)
+  //   _robot->getJoint(i)->setPositionLimitEnforced(false);
 
-  // Set joint damping
-  for (int i = 0; i < dof; ++i)
-    _robot->getJoint(i)->setDampingCoefficient(0, 0.5);
+  // // Set joint damping
+  // for (int i = 0; i < dof; ++i)
+  //   _robot->getJoint(i)->setDampingCoefficient(0, 0.5);
+
+
+  // Initialize this daemon (program!)
+  somatic_d_opts_t dopt;
+  memset(&dopt, 0, sizeof(dopt));
+  mDaemon_cx.is_initialized = 0;
+  dopt.ident = "00-singlearm-ctrl";
+  somatic_d_init( &mDaemon_cx, &dopt );
+
+  // Initialize the arm
+  initArm(mDaemon_cx, mSomaticSinglearm, "singlearm");
+
+  // Set initial position
+  somatic_motor_cmd(&mDaemon_cx, &mSomaticSinglearm, POSITION, mqInit, 7, NULL);
+
+  usleep(4e6);
+
+  // Send a message; set the event code and the priority
+  somatic_d_event(&mDaemon_cx, SOMATIC__EVENT__PRIORITIES__NOTICE, 
+      SOMATIC__EVENT__CODES__PROC_RUNNING, NULL, NULL);
+
+  mStartTime = get_time();
+
 }
 
 //==============================================================================
 Controller::~Controller()
 {
+
+  // Send the stoppig event
+  somatic_d_event(&mDaemon_cx, SOMATIC__EVENT__PRIORITIES__NOTICE,
+           SOMATIC__EVENT__CODES__PROC_STOPPING, NULL, NULL);
+
+    // Halt the Schunk modules
+  somatic_motor_cmd(&mDaemon_cx, &mSomaticSinglearm, SOMATIC__MOTOR_PARAM__MOTOR_HALT, NULL, 7, NULL);
+
+  // Destroy the daemon resources
+  somatic_d_destroy(&mDaemon_cx);
+
+  std::cout << "Destroyed daemons and halted modules" << std::endl;
 }
 //==============================================================================
 struct OptParams{
@@ -75,7 +158,45 @@ struct OptParams{
   Eigen::VectorXd b;
 };
 
+//==============================================================================
+unsigned long Controller::get_time(){
+  struct timeval tv;
+  gettimeofday(&tv, NULL);
+  unsigned long ret = tv.tv_usec;
+  ret /= 1000;
+  ret += (tv.tv_sec *1000);
+  return ret;
 
+}
+
+// ==============================================================================
+/// Initializes the arm
+void Controller::initArm (somatic_d_t& daemon_cx, somatic_motor_t& arm, const char* armName) { 
+
+  // Get the channel names
+  char cmd_name [16], state_name [16];
+  sprintf(cmd_name, "%s-cmd", armName);
+  sprintf(state_name, "%s-state", armName);
+
+  // Initialize the arm with the daemon context, channel names and # of motors
+  somatic_motor_init(&daemon_cx, &arm, 7, cmd_name, state_name);
+  usleep(1e5);
+
+  // Set the min/max values for valid and limits values
+  double** limits [] = {
+    &arm.pos_valid_min, &arm.vel_valid_min, 
+    &arm.pos_limit_min, &arm.pos_limit_min, 
+    &arm.pos_valid_max, &arm.vel_valid_max, 
+    &arm.pos_limit_max, &arm.pos_limit_max};
+  for(size_t i = 0; i < 4; i++) aa_fset(*limits[i], -1024.1, 7);
+  for(size_t i = 4; i < 8; i++) aa_fset(*limits[i], 1024.1, 7);
+
+
+  // Update and reset them
+  somatic_motor_update(&daemon_cx, &arm);
+  somatic_motor_cmd(&daemon_cx, &arm, SOMATIC__MOTOR_PARAM__MOTOR_RESET, NULL, 7, NULL);
+  usleep(1e5);
+}
 
 //==============================================================================
 void matprint(Eigen::MatrixXd A){
@@ -101,14 +222,31 @@ double optFunc(const std::vector<double> &x, std::vector<double> &grad, void *my
   return (0.5 * pow((optParams->P*X - optParams->b).norm(), 2));
 }
 
+Eigen::VectorXd sigmoid(Eigen::VectorXd x) {
+  Eigen::VectorXd y = x;
+  for(int i=0; i<x.size(); i++) {
+    y(i) = 2/(1 + exp(-2*x(i))) - 1;
+  }
+  return y;
+}
+
 //==============================================================================
 void Controller::update(const Eigen::Vector3d& _targetPosition, const Eigen::Vector3d& _targetRPY)
 {
+  using namespace dart;
   double wPos = 1, wOr = 1;
 
-  using namespace dart;
-
-  Eigen::VectorXd dq = mRobot->getVelocities();                 // n x 1
+  double currentTime = (get_time() - mStartTime)/1000.0;
+  double dt = currentTime - mPriorTime;
+  std::cout << "dt: " << dt << std::endl;
+  // Eigen::VectorXd dq = mRobot->getVelocities();                 // n x 1
+  somatic_motor_update(&mDaemon_cx, &mSomaticSinglearm);
+  for(int i=0; i < 7; i++) {
+    mq(i) = mSomaticSinglearm.pos[i];
+    mdq(i) = mSomaticSinglearm.vel[i];
+  }
+  mRobot->setPositions(mq);
+  mRobot->setVelocities(mdq);
 
   // End-effector Position
   Eigen::Vector3d x = mEndEffector->getTransform().translation();
@@ -117,7 +255,7 @@ void Controller::update(const Eigen::Vector3d& _targetPosition, const Eigen::Vec
   math::LinearJacobian Jv = mEndEffector->getLinearJacobian();       // 3 x n
   math::LinearJacobian dJv = mEndEffector->getLinearJacobianDeriv();  // 3 x n
   Eigen::Matrix<double, 3, 7> PPos = Jv;
-  Eigen::Vector3d bPos = -(dJv*dq - ddxref);
+  Eigen::Vector3d bPos = -(dJv*mdq - ddxref);
 
   // End-effector Orientation
   Eigen::Quaterniond quat(mEndEffector->getTransform().rotation());
@@ -138,7 +276,7 @@ void Controller::update(const Eigen::Vector3d& _targetPosition, const Eigen::Vec
   math::AngularJacobian Jw = mEndEffector->getAngularJacobian();       // 3 x n
   math::AngularJacobian dJw = mEndEffector->getAngularJacobianDeriv();  // 3 x n
   Eigen::Matrix<double, 3, 7> POr = Jw;
-  Eigen::Vector3d bOr = -(dJw*dq - dwref);
+  Eigen::Vector3d bOr = -(dJw*mdq - dwref);
 
 
   // Optimizer stuff
@@ -168,10 +306,24 @@ void Controller::update(const Eigen::Vector3d& _targetPosition, const Eigen::Vec
   //torques
   Eigen::MatrixXd M = mRobot->getMassMatrix();                   // n x n
   Eigen::VectorXd Cg   = mRobot->getCoriolisAndGravityForces();        // n x 1
-  mForces = M*ddq + Cg;
+  mForces = M*ddq + Cg + mRotorInertia*ddq + mViscousFriction*(mdq + ddq*dt) + mCoulombFriction*sigmoid(mdq + ddq*dt);
 
+  
+  Eigen::VectorXd currEigen = mKmInv*mGRInv*mForces;
+  double curr[7];
+  for(int i=0; i<7; i++) {
+    curr[i] = currEigen(i);
+  }
+  
   // Apply the joint space forces to the robot
-  mRobot->setForces(mForces);
+  // mRobot->setForces(mForces);
+  somatic_motor_cmd(&mDaemon_cx, &mSomaticSinglearm, CURRENT, curr, 7, NULL);
+
+  // Free buffers allocated during this cycle
+  aa_mem_region_release(&mDaemon_cx.memreg); 
+  // usleep(1e4);
+
+  mPriorTime = currentTime;
 }
 
 //==============================================================================

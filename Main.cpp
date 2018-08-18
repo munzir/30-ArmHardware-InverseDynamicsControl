@@ -31,7 +31,6 @@
 
 #include <dart/dart.hpp>
 #include <dart/utils/urdf/urdf.hpp>
-#include "file_ops.hpp"
 
 #include "MyWindow.hpp"
 
@@ -44,42 +43,6 @@ int main(int argc, char* argv[])
       = dl.parseSkeleton("dart://sample/urdf/KR5/ground.urdf");
   dart::dynamics::SkeletonPtr robot
       = dl.parseSkeleton("/home/munzir/Documents/Software/09-URDF/7DOFArm/singlearm.urdf");
-
-  // load dynamic parameters and set them in the robot
-  Eigen::MatrixXd beta 
-      = readInputFileAsMatrix("../../20c-RidgeRegression_arm/betaFull/betaFull.txt");
-  int numBodies = robot->getNumBodyNodes();
-  int paramsPerBody = 13;
-  for(int i=1; i<numBodies; i++) {
-    int ind = paramsPerBody*(i-1);
-    double m = beta(ind + 0);
-    Eigen::Vector3d mCOM = beta.block(ind+1, 0, 3, 1);
-    double xx = beta(ind + 4);
-    double yy = beta(ind + 5);
-    double zz = beta(ind + 6);
-    double xy = beta(ind + 7);
-    double xz = beta(ind + 8);
-    double yz = beta(ind + 9);
-
-    robot->getBodyNode(i)->setMass(m);
-    robot->getBodyNode(i)->setLocalCOM(mCOM/m);
-    robot->getBodyNode(i)->setMomentOfInertia(xx, yy, zz, xy, xz, yz);
-  }
-
-  for(int i=1; i<numBodies; i++) {
-    cout << "body node: " << i << ". " << robot->getBodyNode(i)->getName() << endl;
-    cout << "===================================" << endl;
-    cout << "mass: " << robot->getBodyNode(i)->getMass() << endl;
-    cout << "Local mCOM: " << robot->getBodyNode(i)->getLocalCOM().transpose()*robot->getBodyNode(i)->getMass() << endl;
-    double xx, yy, zz, xy, yz, xz;
-    robot->getBodyNode(i)->getMomentOfInertia(xx, yy, zz, xy, xz, yz);
-    cout << "xx: " << xx << endl;
-    cout << "yy: " << yy << endl;
-    cout << "zz: " << zz << endl;
-    cout << "xy: " << xy << endl;
-    cout << "xz: " << xz << endl;
-    cout << "yz: " << yz << endl << endl;
-  }
   
   // create and initialize the world
   dart::simulation::WorldPtr world(new dart::simulation::World);

@@ -36,6 +36,28 @@
 
 #include <dart/dart.hpp>
 
+#include <unistd.h> //for usleep thing
+#include <somatic.h>
+#include <somatic/daemon.h>
+#include <somatic.pb-c.h>
+#include <somatic/motor.h>
+#include <ach.h>
+
+#include <iostream>
+#include <fstream>
+#include <Eigen/Eigen>
+#include <string>
+#include <time.h>
+#include <sys/time.h>
+
+#include "file_ops.hpp"
+
+
+#define VELOCITY SOMATIC__MOTOR_PARAM__MOTOR_VELOCITY
+#define POSITION SOMATIC__MOTOR_PARAM__MOTOR_POSITION
+#define CURRENT SOMATIC__MOTOR_PARAM__MOTOR_CURRENT
+
+
 /// \brief Operational space controller for 6-dof manipulator
 class Controller
 {
@@ -50,6 +72,9 @@ public:
   /// \brief
   void update(const Eigen::Vector3d& _targetPosition, const Eigen::Vector3d& _targetRPY);
 
+  /// \brief initializes the structures related to the arm hardware
+  void initArm (somatic_d_t& daemon_cx, somatic_motor_t& arm, const char* armName);
+
   /// \brief Get robot
   dart::dynamics::SkeletonPtr getRobot() const;
 
@@ -58,6 +83,8 @@ public:
 
   /// \brief Keyboard control
   virtual void keyboard(unsigned char _key, int _x, int _y);
+
+  unsigned long get_time();
 
 private:
   /// \brief Robot
@@ -74,6 +101,22 @@ private:
 
   /// \brief Derivative gain for the virtual spring forces at the end effector
   Eigen::Matrix3d mKv, mKvOr;
+
+  somatic_d_t mDaemon_cx;
+  somatic_motor_t mSomaticSinglearm;  
+  double mqInit[7] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+
+  Eigen::Matrix<double, 7, 7> mRotorInertia, mViscousFriction, mCoulombFriction, mKmInv, mGRInv;
+  double mKm_array[7] = {31.4e-3, 31.4e-3, 38e-3, 38e-3, 16e-3, 16e-3, 16e-3};
+  double mGR_array[7] = {596, 596, 625, 625, 552, 552, 552};
+
+  double mPriorTime;
+  long mStartTime;
+  
+  Eigen::Matrix<double, 7, 1> mq, mdq;
+
+  Eigen::Matrix<double, 7, 1> curLim;
+
 };
 
 #endif  // EXAMPLES_OPERATIONALSPACECONTROL_CONTROLLER_HPP_

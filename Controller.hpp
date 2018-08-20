@@ -52,11 +52,19 @@
 
 #include "file_ops.hpp"
 
+#include <config4cpp/Configuration.h>
+
+#include <nlopt.hpp>
+
+
 
 #define VELOCITY SOMATIC__MOTOR_PARAM__MOTOR_VELOCITY
 #define POSITION SOMATIC__MOTOR_PARAM__MOTOR_POSITION
 #define CURRENT SOMATIC__MOTOR_PARAM__MOTOR_CURRENT
 
+
+using namespace std;
+using namespace config4cpp;
 
 /// \brief Operational space controller for 6-dof manipulator
 class Controller
@@ -86,6 +94,8 @@ public:
 
   unsigned long get_time();
 
+  bool mEnable;
+
 private:
   /// \brief Robot
   dart::dynamics::SkeletonPtr mRobot;
@@ -97,15 +107,19 @@ private:
   Eigen::VectorXd mForces;
 
   /// \brief Proportional gain for the virtual spring forces at the end effector
+  double mWPos, mWOr;
   Eigen::Matrix3d mKp, mKpOr;
 
   /// \brief Derivative gain for the virtual spring forces at the end effector
   Eigen::Matrix3d mKv, mKvOr;
 
+  Eigen::Matrix<double, 7, 7> mWReg;
+  double mKvReg;
+
   somatic_d_t mDaemon_cx;
   somatic_motor_t mSomaticSinglearm;  
-  double mqInit[7] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
-
+  // double mqInit[7] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+  double mqInit[7] = {0.0, -1.04, 0.0, 1.57, 0.0, 0.0, 0.0};
   Eigen::Matrix<double, 7, 7> mRotorInertia, mViscousFriction, mCoulombFriction, mKmInv, mGRInv;
   double mKm_array[7] = {31.4e-3, 31.4e-3, 38e-3, 38e-3, 16e-3, 16e-3, 16e-3};
   double mGR_array[7] = {596, 596, 625, 625, 552, 552, 552};
@@ -115,8 +129,15 @@ private:
   
   Eigen::Matrix<double, 7, 1> mq, mdq;
 
-  Eigen::Matrix<double, 7, 1> curLim;
+  Eigen::Matrix<double, 7, 1> mCurLim;
 
+  int mSteps;
+
+  bool mdtFixed;
+  double mdt;
+
+  bool mCompensateFriction;
+  bool mPredictFriction;
 };
 
 #endif  // EXAMPLES_OPERATIONALSPACECONTROL_CONTROLLER_HPP_

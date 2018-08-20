@@ -9,8 +9,6 @@
 /home/munzir/Documents/Software/30-ArmHardware-InverseDynamicsControl/Controller.cpp
 Controller.hpp
 /home/munzir/Documents/Software/30-ArmHardware-InverseDynamicsControl/Controller.hpp
-nlopt.hpp
--
 
 /home/munzir/Documents/Software/30-ArmHardware-InverseDynamicsControl/Controller.hpp
 Eigen/Eigen
@@ -43,6 +41,10 @@ sys/time.h
 -
 file_ops.hpp
 /home/munzir/Documents/Software/30-ArmHardware-InverseDynamicsControl/file_ops.hpp
+config4cpp/Configuration.h
+-
+nlopt.hpp
+-
 
 /home/munzir/Documents/Software/30-ArmHardware-InverseDynamicsControl/Main.cpp
 dart/dart.hpp

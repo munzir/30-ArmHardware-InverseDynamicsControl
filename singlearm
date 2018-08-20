@@ -22,20 +22,20 @@ NOCOLOR="\033[0;36m"
 
 
 #Joint limits - radians
-JOINT_1_MIN=-1.507       # PI/2, Joint limit for rotational joints
-JOINT_1_MAX=1.507        # PI/2, Joint limit for rotational joints
+JOINT_1_MIN=-12.56       # PI/2, Joint limit for rotational joints
+JOINT_1_MAX=12.56        # PI/2, Joint limit for rotational joints
 JOINT_2_MIN=-1.507       # PI/2, Joint limit for rotational joints
 JOINT_2_MAX=1.507        # PI/2, Joint limit for rotational joints
-JOINT_3_MIN=-1.507       # PI/2, Joint limit for rotational joints
-JOINT_3_MAX=1.507        # PI/2, Joint limit for rotational joints
+JOINT_3_MIN=-12.56       # PI/2, Joint limit for rotational joints
+JOINT_3_MAX=12.56        # PI/2, Joint limit for rotational joints
 JOINT_4_MIN=-1.507       # PI/2, Joint limit for rotational joints
 JOINT_4_MAX=1.507        # PI/2, Joint limit for rotational joints
-JOINT_5_MIN=-1.507       # PI/2, Joint limit for rotational joints
-JOINT_5_MAX=1.507        # PI/2, Joint limit for rotational joints
+JOINT_5_MIN=-12.56       # PI/2, Joint limit for rotational joints
+JOINT_5_MAX=12.56        # PI/2, Joint limit for rotational joints
 JOINT_6_MIN=-1.507       # PI/2, Joint limit for rotational joints
 JOINT_6_MAX=1.507        # PI/2, Joint limit for rotational joints
-JOINT_7_MIN=-1.507       # PI/2, Joint limit for rotational joints
-JOINT_7_MAX=1.507        # PI/2, Joint limit for rotational joints
+JOINT_7_MIN=-12.56       # PI/2, Joint limit for rotational joints
+JOINT_7_MAX=12.56        # PI/2, Joint limit for rotational joints
 ENDEFF_MIN=-1.0          # Limit for end effector
 ENDEFF_MAX=1.0           # Limit for end effector
 
@@ -207,8 +207,8 @@ StartAllProcess()
 	#$SNS run -d -r sdh-arm -- sdhiod -b $CANBUS_0 -c cmd1 -s state1
 
 pciod -S param_max_current \
-        -b $CANBUS_0 -m 1 -x 10.0 -m 2 -x 10.0 -m 3 -x 8.0 -m 4 -x 8.0 \
-        -b $CANBUS_1 -m 5 -x 6.0 -m 6 -x 6.0 -m 7 -x 6.0 #-m 8 -x 13  
+        -b $CANBUS_0 -m 1 -x 9.5 -m 2 -x 9.5 -m 3 -x 7.5 -m 4 -x 7.5 \
+        -b $CANBUS_1 -m 5 -x 5.5 -m 6 -x 5.5 -m 7 -x 5.5 #-m 8 -x 13  
 }
 
 StopAllProcess()

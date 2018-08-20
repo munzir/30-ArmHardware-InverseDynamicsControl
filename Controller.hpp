@@ -138,6 +138,8 @@ private:
 
   bool mCompensateFriction;
   bool mPredictFriction;
+
+  double mGainFactor;
 };
 
 #endif  // EXAMPLES_OPERATIONALSPACECONTROL_CONTROLLER_HPP_

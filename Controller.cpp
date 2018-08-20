@@ -71,31 +71,34 @@ Controller::Controller(dart::dynamics::SkeletonPtr _robot,
     mWPos = cfg->lookupFloat(scope, "wPos");
     cout << "wPos: " << mWPos << endl;
 
+    mGainFactor = cfg->lookupFloat(scope, "gainFactor");
+    cout << "gainFactor: " << mGainFactor << endl;
+
     str = cfg->lookupString(scope, "Kp");
-    stream.str(str); for(int i=0; i<3; i++) stream >> mKp(i, i); stream.clear();
+    stream.str(str); for(int i=0; i<3; i++) stream >> mKp(i, i); stream.clear(); mKp *= mGainFactor;
     cout << "Kp: " << mKp(0, 0) << ", " << mKp(1, 1) << ", " << mKp(2, 2) << endl;
 
     str = cfg->lookupString(scope, "Kv");
-    stream.str(str); for(int i=0; i<3; i++) stream >> mKv(i, i); stream.clear();
+    stream.str(str); for(int i=0; i<3; i++) stream >> mKv(i, i); stream.clear(); mKv *= mGainFactor;
     cout << "Kv: " << mKv(0, 0) << ", " << mKv(1, 1) << ", " << mKv(2, 2) << endl;
 
     mWOr = cfg->lookupFloat(scope, "wOr");
     cout << "wOr: " << mWOr << endl;
 
     str = cfg->lookupString(scope, "KpOr");
-    stream.str(str); for(int i=0; i<3; i++) stream >> mKpOr(i, i); stream.clear();
+    stream.str(str); for(int i=0; i<3; i++) stream >> mKpOr(i, i); stream.clear(); mKpOr *= mGainFactor;
     cout << "KpOr: " << mKpOr(0, 0) << ", " << mKpOr(1, 1) << ", " << mKpOr(2, 2) << endl;
 
     str = cfg->lookupString(scope, "KvOr");
-    stream.str(str); for(int i=0; i<3; i++) stream >> mKvOr(i, i); stream.clear();
+    stream.str(str); for(int i=0; i<3; i++) stream >> mKvOr(i, i); stream.clear(); mKvOr *= mGainFactor;
     cout << "KvOr: " << mKvOr(0, 0) << ", " << mKvOr(1, 1) << ", " << mKvOr(2, 2) << endl;
 
-    str = cfg->lookupString(scope, "KvOr");
+    str = cfg->lookupString(scope, "wReg");
     stream.str(str); for(int i=0; i<7; i++) stream >> mWReg(i, i); stream.clear();
     cout << "wReg: "; for(int i=0; i<6; i++) cout << mWReg(i, i) << ", "; cout << mWReg(6, 6) << endl;
 
-    mKvReg = cfg->lookupFloat(scope, "KvReg");
-    cout << "KvReg: " << mKvReg << endl;
+    mKvReg = cfg->lookupFloat(scope, "KvReg"); mKvReg *= mGainFactor;
+    cout << "KvReg: " << mKvReg << endl; 
 
     mdtFixed = cfg->lookupBoolean(scope, "dtFixed");
     cout << "dtFixed: " << (mdtFixed?"true":"false") << endl;
@@ -414,27 +417,19 @@ void Controller::update(const Eigen::Vector3d& _targetPosition, const Eigen::Vec
   
 
   //torques
-  // mForces = M*ddq + Cg + mRotorInertia*ddq + mViscousFriction*(mdq + ddq*dt) + mCoulombFriction*sigmoid(mdq + ddq*dt);
-  mForces = M*ddq + Cg + mRotorInertia*ddq + mCompensateFriction*(mViscousFriction*(mdq + mPredictFriction*ddq*dt) + mCoulombFriction*sigmoid(mdq));
+  // mForces = M*ddq + Cg + mRotorInertia*ddq + mCompensateFriction*(mViscousFriction*(mdq + mPredictFriction*ddq*dt) + mCoulombFriction*sigmoid(mdq));
+  // Eigen::VectorXd currEigen = mKmInv*mGRInv*mForces;
+  // double curr[7];
+  // for(int i=0; i<7; i++) curr[i] = currEigen(i);
+  // if(mEnable) somatic_motor_cmd(&mDaemon_cx, &mSomaticSinglearm, CURRENT, curr, 7, NULL);
+  // if((mSteps%50)==0) std::cout << (mEnable?"Enabled ":"") << "Currents: " << currEigen.transpose() << "                   \r";
 
-  
-  Eigen::VectorXd currEigen = mKmInv*mGRInv*mForces;
-  double curr[7];
-  for(int i=0; i<7; i++) {
-    curr[i] = currEigen(i);
-  }
-  
-  // Apply the joint space forces to the robot
-  // mRobot->setForces(mForces);
-  if(mEnable) {
-    somatic_motor_cmd(&mDaemon_cx, &mSomaticSinglearm, CURRENT, curr, 7, NULL);
-  }
-
-  if((mSteps%50)==0) {
-    std::cout << (mEnable?"Enabled ":"") << "Currents: " << currEigen.transpose() << "                   \r";
-  }
-
-  
+  // velocities
+  Eigen::VectorXd dqrefEigen = mdq + ddq*dt;
+  double dqref[7];
+  for(int i=0; i<7; i++) dqref[i] = dqrefEigen(i);
+  if(mEnable) somatic_motor_cmd(&mDaemon_cx, &mSomaticSinglearm, VELOCITY, dqref, 7, NULL);
+  if((mSteps%50)==0) std::cout << (mEnable?"Enabled ":"") << "ddq: " << ddq.transpose() << "                   \r";
 
   // Free buffers allocated during this cycle
   aa_mem_region_release(&mDaemon_cx.memreg); 

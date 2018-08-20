@@ -320,6 +320,11 @@ CMakeFiles/operationalSpaceControl.dir/Controller.cpp.o
  /usr/local/include/amino/undef.h
  /usr/local/include/amino/unit.h
  /usr/local/include/amino/validate.h
+ /usr/local/include/config4cpp/Configuration.h
+ /usr/local/include/config4cpp/ConfigurationException.h
+ /usr/local/include/config4cpp/StringBuffer.h
+ /usr/local/include/config4cpp/StringVector.h
+ /usr/local/include/config4cpp/namespace.h
  /usr/local/include/dart/collision/CollisionDetector.hpp
  /usr/local/include/dart/collision/CollisionFilter.hpp
  /usr/local/include/dart/collision/CollisionGroup.hpp
@@ -863,6 +868,11 @@ CMakeFiles/operationalSpaceControl.dir/Main.cpp.o
  /usr/local/include/amino/undef.h
  /usr/local/include/amino/unit.h
  /usr/local/include/amino/validate.h
+ /usr/local/include/config4cpp/Configuration.h
+ /usr/local/include/config4cpp/ConfigurationException.h
+ /usr/local/include/config4cpp/StringBuffer.h
+ /usr/local/include/config4cpp/StringVector.h
+ /usr/local/include/config4cpp/namespace.h
  /usr/local/include/dart/collision/CollisionDetector.hpp
  /usr/local/include/dart/collision/CollisionFilter.hpp
  /usr/local/include/dart/collision/CollisionGroup.hpp
@@ -1426,6 +1436,11 @@ CMakeFiles/operationalSpaceControl.dir/MyWindow.cpp.o
  /usr/local/include/amino/undef.h
  /usr/local/include/amino/unit.h
  /usr/local/include/amino/validate.h
+ /usr/local/include/config4cpp/Configuration.h
+ /usr/local/include/config4cpp/ConfigurationException.h
+ /usr/local/include/config4cpp/StringBuffer.h
+ /usr/local/include/config4cpp/StringVector.h
+ /usr/local/include/config4cpp/namespace.h
  /usr/local/include/dart/collision/CollisionDetector.hpp
  /usr/local/include/dart/collision/CollisionFilter.hpp
  /usr/local/include/dart/collision/CollisionGroup.hpp

@@ -240,6 +240,10 @@ void MyWindow::keyboard(unsigned char _key, int _x, int _y)
       mTargetRPY[2] += angleInc;
       std::cout << "RPY: " << mTargetRPY(0) << ", " << mTargetRPY(1) << ", " << mTargetRPY(2) << std::endl;
       break;
+    case '&':
+      mController->mEnable = !mController->mEnable;
+      cout << "Hardware Enabled: " << (mController->mEnable?"true":"false") << endl;
+      break;
     default:
       // Default keyboard control
       SimWindow::keyboard(_key, _x, _y);

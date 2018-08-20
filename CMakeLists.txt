@@ -12,4 +12,4 @@ include_directories(${DART_INCLUDE_DIRS})
 file(GLOB srcs "*.cpp" "*.hpp")
 add_executable(${PROJECT_NAME} ${srcs})
 
-target_link_libraries(${PROJECT_NAME} ${DART_LIBRARIES} nlopt protobuf-c amino ach somatic stdc++ blas lapack)
+target_link_libraries(${PROJECT_NAME} ${DART_LIBRARIES} nlopt protobuf-c amino ach somatic stdc++ blas lapack config4cpp)

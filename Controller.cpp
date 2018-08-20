@@ -30,7 +30,6 @@
  */
 
 #include "Controller.hpp"
-#include <nlopt.hpp>
 //==============================================================================
 Controller::Controller(dart::dynamics::SkeletonPtr _robot,
                        dart::dynamics::BodyNode* _endEffector)
@@ -40,11 +39,86 @@ Controller::Controller(dart::dynamics::SkeletonPtr _robot,
   assert(_robot != nullptr);
   assert(_endEffector != nullptr);
   int dof = mRobot->getNumDofs();
+  
+  // ======================= Tunable Parameters
+  bool isBetaConsistent;
+  double currentLimitFactor;
+  mKp.setZero();
+  mKv.setZero();
+  mKpOr.setZero();
+  mKvOr.setZero();
+  mWReg.setZero();
 
 
-  // load dynamic parameters and set them in the robot
+  Configuration * cfg = Configuration::create();
+  const char * scope = "";
+  const char * configFile = "../controlParams.cfg";
+  const char * str;
+  std::istringstream stream;
+  double newDouble;
+  
+  try {
+    cfg->parse(configFile);
+    
+    isBetaConsistent = cfg->lookupBoolean(scope, "betaConsistent");
+    cout << "betaConsistent: " << (isBetaConsistent?"true":"false") << endl;
+
+    currentLimitFactor = min(1.0, max(0.0, (double)cfg->lookupFloat(scope, "currentLimitFactor")));
+    cout << "currentLimitFactor: " << currentLimitFactor << endl;
+    mCurLim << 9.5, 9.5, 7.5, 7.5, 5.5, 5.5, 5.5;
+    mCurLim *= currentLimitFactor;
+
+    mWPos = cfg->lookupFloat(scope, "wPos");
+    cout << "wPos: " << mWPos << endl;
+
+    str = cfg->lookupString(scope, "Kp");
+    stream.str(str); for(int i=0; i<3; i++) stream >> mKp(i, i); stream.clear();
+    cout << "Kp: " << mKp(0, 0) << ", " << mKp(1, 1) << ", " << mKp(2, 2) << endl;
+
+    str = cfg->lookupString(scope, "Kv");
+    stream.str(str); for(int i=0; i<3; i++) stream >> mKv(i, i); stream.clear();
+    cout << "Kv: " << mKv(0, 0) << ", " << mKv(1, 1) << ", " << mKv(2, 2) << endl;
+
+    mWOr = cfg->lookupFloat(scope, "wOr");
+    cout << "wOr: " << mWOr << endl;
+
+    str = cfg->lookupString(scope, "KpOr");
+    stream.str(str); for(int i=0; i<3; i++) stream >> mKpOr(i, i); stream.clear();
+    cout << "KpOr: " << mKpOr(0, 0) << ", " << mKpOr(1, 1) << ", " << mKpOr(2, 2) << endl;
+
+    str = cfg->lookupString(scope, "KvOr");
+    stream.str(str); for(int i=0; i<3; i++) stream >> mKvOr(i, i); stream.clear();
+    cout << "KvOr: " << mKvOr(0, 0) << ", " << mKvOr(1, 1) << ", " << mKvOr(2, 2) << endl;
+
+    str = cfg->lookupString(scope, "KvOr");
+    stream.str(str); for(int i=0; i<7; i++) stream >> mWReg(i, i); stream.clear();
+    cout << "wReg: "; for(int i=0; i<6; i++) cout << mWReg(i, i) << ", "; cout << mWReg(6, 6) << endl;
+
+    mKvReg = cfg->lookupFloat(scope, "KvReg");
+    cout << "KvReg: " << mKvReg << endl;
+
+    mdtFixed = cfg->lookupBoolean(scope, "dtFixed");
+    cout << "dtFixed: " << (mdtFixed?"true":"false") << endl;
+
+    mdt = cfg->lookupFloat(scope, "dt");
+    cout << "dt: " << mdt << endl;
+
+    mCompensateFriction = cfg->lookupBoolean(scope, "compensateFriction");
+    cout << "compensateFriction: " << (mCompensateFriction?"true":"false") << endl;
+
+    mPredictFriction = cfg->lookupBoolean(scope, "predictFriction");
+    cout << "predictFriction: " << (mPredictFriction?"true":"false") << endl;
+
+  } catch(const ConfigurationException & ex) {
+    cerr << ex.c_str() << endl;
+    cfg->destroy();
+  }
+
+  // ============================= load dynamic parameters and set them in the robot
   Eigen::MatrixXd beta 
-      = readInputFileAsMatrix("../../20c-RidgeRegression_arm/betaFull/betaFull.txt");
+      = readInputFileAsMatrix(isBetaConsistent?\
+        "../../20c-RidgeRegression_arm/betaConsistent/betaConsistent.txt":\
+        "../../20c-RidgeRegression_arm/betaFull/betaFull.txt");
   int numBodies = mRobot->getNumBodyNodes();
   int paramsPerBody = 13;
   mRotorInertia.setZero();
@@ -74,65 +148,47 @@ Controller::Controller(dart::dynamics::SkeletonPtr _robot,
     mGRInv(i-1, i-1) = 1/mGR_array[i-1];
   }
 
-  for(int i=1; i<numBodies; i++) {
-    cout << "body node: " << i << ". " << mRobot->getBodyNode(i)->getName() << endl;
-    cout << "===================================" << endl;
-    cout << "mass: " << mRobot->getBodyNode(i)->getMass() << endl;
-    cout << "Local mCOM: " << mRobot->getBodyNode(i)->getLocalCOM().transpose()*mRobot->getBodyNode(i)->getMass() << endl;
-    double xx, yy, zz, xy, yz, xz;
-    mRobot->getBodyNode(i)->getMomentOfInertia(xx, yy, zz, xy, xz, yz);
-    cout << "xx: " << xx << endl;
-    cout << "yy: " << yy << endl;
-    cout << "zz: " << zz << endl;
-    cout << "xy: " << xy << endl;
-    cout << "xz: " << xz << endl;
-    cout << "yz: " << yz << endl << endl;
-  }
-  curLim << 9.5, 9.5, 7.5, 7.5, 5.5, 5.5, 5.5;
-
-  mForces.setZero(dof);
-
-  mKp.setZero();
-  mKv.setZero();
-
-  for (int i = 0; i < 3; ++i)
-  {
-    mKp(i, i) = 750.0;
-    mKv(i, i) = 250.0;
-
-    mKpOr(i, i) = 150.0;
-    mKvOr(i, i) = 50; 
-  }
-
-  // // Remove position limits
-  // for (int i = 0; i < dof; ++i)
-  //   _robot->getJoint(i)->setPositionLimitEnforced(false);
-
-  // // Set joint damping
-  // for (int i = 0; i < dof; ++i)
-  //   _robot->getJoint(i)->setDampingCoefficient(0, 0.5);
-
-
-  // Initialize this daemon (program!)
+  // for(int i=1; i<numBodies; i++) {
+  //   cout << "body node: " << i << ". " << mRobot->getBodyNode(i)->getName() << endl;
+  //   cout << "------" << endl;
+  //   cout << "mass: " << mRobot->getBodyNode(i)->getMass() << endl;
+  //   cout << "Local mCOM: " << mRobot->getBodyNode(i)->getLocalCOM().transpose()*mRobot->getBodyNode(i)->getMass() << endl;
+  //   double xx, yy, zz, xy, yz, xz;
+  //   mRobot->getBodyNode(i)->getMomentOfInertia(xx, yy, zz, xy, xz, yz);
+  //   cout << "xx: " << xx << endl;
+  //   cout << "yy: " << yy << endl;
+  //   cout << "zz: " << zz << endl;
+  //   cout << "xy: " << xy << endl;
+  //   cout << "xz: " << xz << endl;
+  //   cout << "yz: " << yz << endl << endl;
+  // }
+  
+  // ============================= Initialize this daemon (program!)
   somatic_d_opts_t dopt;
   memset(&dopt, 0, sizeof(dopt));
   mDaemon_cx.is_initialized = 0;
   dopt.ident = "00-singlearm-ctrl";
   somatic_d_init( &mDaemon_cx, &dopt );
 
-  // Initialize the arm
+  // ============================= Initialize the arm
   initArm(mDaemon_cx, mSomaticSinglearm, "singlearm");
 
-  // Set initial position
+  // ============================= Set initial position
   somatic_motor_cmd(&mDaemon_cx, &mSomaticSinglearm, POSITION, mqInit, 7, NULL);
-
   usleep(4e6);
+  somatic_motor_update(&mDaemon_cx, &mSomaticSinglearm);
+  for(int i=0; i < 7; i++) mq(i) = mSomaticSinglearm.pos[i];
+  mRobot->setPositions(mq);
 
-  // Send a message; set the event code and the priority
+  // ============================= Send a message; set the event code and the priority
   somatic_d_event(&mDaemon_cx, SOMATIC__EVENT__PRIORITIES__NOTICE, 
       SOMATIC__EVENT__CODES__PROC_RUNNING, NULL, NULL);
 
-  mStartTime = get_time();
+  // ============================= set mStep to zero
+  mSteps = 0;
+
+  // ============================= flag to enable hardware control, set by pressing '&' in keyboard
+  mEnable = false;
 
 }
 
@@ -158,13 +214,39 @@ struct OptParams{
   Eigen::VectorXd b;
 };
 
+
+//========================================================================
+void constraintFunc(unsigned m, double *result, unsigned n, const double* x, double* grad, void* f_data) {
+ 
+  OptParams* constParams = reinterpret_cast<OptParams *>(f_data);
+  //std::cout << "done reading optParams " << std::endl;
+  if (grad != NULL) {
+    for(int i=0; i<m; i++) {
+      for(int j=0; j<n; j++){
+        grad[i*n+j] = constParams->P(i, j);
+      }
+    }
+  }
+ 
+  // std::cout << "done with gradient" << std::endl;
+  Eigen::Matrix<double, 7, 1> X;
+  for(size_t i=0; i<n; i++) X(i) = x[i];
+ 
+  //std::cout << "done reading x" << std::endl;
+  Eigen::VectorXd mResult;
+  mResult = constParams->P*X - constParams->b;
+  for(size_t i=0; i<m; i++) {
+    result[i] = mResult(i);
+  }
+  // std::cout << "done calculating the result"
+}
 //==============================================================================
 unsigned long Controller::get_time(){
   struct timeval tv;
   gettimeofday(&tv, NULL);
   unsigned long ret = tv.tv_usec;
-  ret /= 1000;
-  ret += (tv.tv_sec *1000);
+  ret /= 10;
+  ret += (tv.tv_sec*100000);
   return ret;
 
 }
@@ -233,12 +315,21 @@ Eigen::VectorXd sigmoid(Eigen::VectorXd x) {
 //==============================================================================
 void Controller::update(const Eigen::Vector3d& _targetPosition, const Eigen::Vector3d& _targetRPY)
 {
-  using namespace dart;
-  double wPos = 1, wOr = 1;
 
-  double currentTime = (get_time() - mStartTime)/1000.0;
-  double dt = currentTime - mPriorTime;
-  std::cout << "dt: " << dt << std::endl;
+  mSteps++;
+
+  if(mSteps == 1) {
+    // =============================Start Time  
+    mStartTime = get_time();
+  }
+
+
+  using namespace dart;
+  
+  double currentTime = (get_time() - mStartTime)/100000.0;
+  double dt = (mdtFixed? mdt : (currentTime - mPriorTime));
+  // cout << "dt: " << currentTime - mPriorTime << endl;
+  //std::cout << "dt: " << dt << std::endl;
   // Eigen::VectorXd dq = mRobot->getVelocities();                 // n x 1
   somatic_motor_update(&mDaemon_cx, &mSomaticSinglearm);
   for(int i=0; i < 7; i++) {
@@ -278,25 +369,44 @@ void Controller::update(const Eigen::Vector3d& _targetPosition, const Eigen::Vec
   Eigen::Matrix<double, 3, 7> POr = Jw;
   Eigen::Vector3d bOr = -(dJw*mdq - dwref);
 
+  // Speed Regulation
+  Eigen::MatrixXd PReg = Eigen::Matrix<double, 7, 7>::Identity();
+  Eigen::MatrixXd bReg = -mKvReg*mdq;
 
-  // Optimizer stuff
-  nlopt::opt opt(nlopt::LD_MMA, 7);
+
+  Eigen::MatrixXd M = mRobot->getMassMatrix();                   // n x n
+  Eigen::VectorXd Cg   = mRobot->getCoriolisAndGravityForces();        // n x 1
+  
+  const vector<double> inequalityconstraintTol(7, 1e-3);
+  OptParams inequalityconstraintParams[2];
+  inequalityconstraintParams[0].P = mKmInv*mGRInv*(M + mRotorInertia + mCompensateFriction*mPredictFriction*mViscousFriction*dt);
+  inequalityconstraintParams[1].P = -mKmInv*mGRInv*(M + mRotorInertia + mCompensateFriction*mPredictFriction*mViscousFriction*dt);
+  inequalityconstraintParams[0].b = -mKmInv*mGRInv*(Cg + mCompensateFriction*(mViscousFriction*mdq + mCoulombFriction*sigmoid(mdq))) + mCurLim; 
+  inequalityconstraintParams[1].b =  mKmInv*mGRInv*(Cg + mCompensateFriction*(mViscousFriction*mdq + mCoulombFriction*sigmoid(mdq))) + mCurLim;
+  
+
+   // Optimizer stuff
+  nlopt::opt opt(nlopt::LD_SLSQP, 7);
   OptParams optParams;
   std::vector<double> ddq_vec(7);
   double minf;
 
   // Perform optimization to find joint accelerations 
-  Eigen::MatrixXd P(PPos.rows() + POr.rows(), PPos.cols() );
-  P << wPos*PPos,
-       wOr*POr;
+  Eigen::MatrixXd P(PPos.rows() + POr.rows() + PReg.rows(), PPos.cols() );
+  P << mWPos*PPos,
+       mWOr*POr,
+       mWReg*PReg;
   
-  Eigen::VectorXd b(bPos.rows() + bOr.rows(), bPos.cols() );
-  b << wPos*bPos,
-       wOr*bOr;
+  Eigen::VectorXd b(bPos.rows() + bOr.rows() + bReg.rows(), bPos.cols() );
+  b << mWPos*bPos,
+       mWOr*bOr,
+       mWReg*bReg;
        
   optParams.P = P;
   optParams.b = b;
   opt.set_min_objective(optFunc, &optParams);
+  opt.add_inequality_mconstraint(constraintFunc, &inequalityconstraintParams[0], inequalityconstraintTol);
+  opt.add_inequality_mconstraint(constraintFunc, &inequalityconstraintParams[1], inequalityconstraintTol);
   opt.set_xtol_rel(1e-4);
   opt.set_maxtime(0.005);
   opt.optimize(ddq_vec, minf);
@@ -304,9 +414,8 @@ void Controller::update(const Eigen::Vector3d& _targetPosition, const Eigen::Vec
   
 
   //torques
-  Eigen::MatrixXd M = mRobot->getMassMatrix();                   // n x n
-  Eigen::VectorXd Cg   = mRobot->getCoriolisAndGravityForces();        // n x 1
-  mForces = M*ddq + Cg + mRotorInertia*ddq + mViscousFriction*(mdq + ddq*dt) + mCoulombFriction*sigmoid(mdq + ddq*dt);
+  // mForces = M*ddq + Cg + mRotorInertia*ddq + mViscousFriction*(mdq + ddq*dt) + mCoulombFriction*sigmoid(mdq + ddq*dt);
+  mForces = M*ddq + Cg + mRotorInertia*ddq + mCompensateFriction*(mViscousFriction*(mdq + mPredictFriction*ddq*dt) + mCoulombFriction*sigmoid(mdq));
 
   
   Eigen::VectorXd currEigen = mKmInv*mGRInv*mForces;
@@ -317,7 +426,15 @@ void Controller::update(const Eigen::Vector3d& _targetPosition, const Eigen::Vec
   
   // Apply the joint space forces to the robot
   // mRobot->setForces(mForces);
-  somatic_motor_cmd(&mDaemon_cx, &mSomaticSinglearm, CURRENT, curr, 7, NULL);
+  if(mEnable) {
+    somatic_motor_cmd(&mDaemon_cx, &mSomaticSinglearm, CURRENT, curr, 7, NULL);
+  }
+
+  if((mSteps%50)==0) {
+    std::cout << (mEnable?"Enabled ":"") << "Currents: " << currEigen.transpose() << "                   \r";
+  }
+
+  
 
   // Free buffers allocated during this cycle
   aa_mem_region_release(&mDaemon_cx.memreg); 
